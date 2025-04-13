@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>HealthAdvisor</title>
+</head>
+<body>
+  <h1>HealthAdvisor: An Intelligent Agent for Interpreting Medical Test Results</h1>
+
+  <form id="abnormalForm">
+    <label>Age:
+      <input type="number" name="age" required>
+    </label>
+
+    <label>Gender:
+      <select name="gender" required>
+        <option value="female">Female</option>
+        <option value="male">Male</option>
+      </select>
+    </label>
+
+    <label>Select Test:
+      <select name="test" id="testDropdown" required>
+        <option value="">--Loading tests--</option>
+        <option value="other">Other (Type Below)</option>
+      </select>
+    </label>
+    
+    <label>If Other, Enter Test Name:
+      <input type="text" id="otherTestInput" name="otherTest" placeholder="e.g. ALT">
+    </label>
+
+    <label>Value:
+      <input type="number" name="value" step="any" required>
+    </label>
+
+    <button type="submit">Check</button>
+  </form>
+
+  <pre id="result"></pre>
+
+  <script>
+    async function loadTests() {
+      const dropdown = document.getElementById("testDropdown");
+  
+      try {
+        const res = await fetch("http://localhost:8080/tests");
+        const data = await res.json();
+  
+        // Clear and repopulate dropdown
+        dropdown.innerHTML = '<option value="">--Select a test--</option>';
+        for (const label of data.tests) {
+          const value = label.toLowerCase().replace(/ /g, "_");
+          const opt = document.createElement("option");
+          opt.value = value;
+          opt.textContent = label;
+          dropdown.appendChild(opt);
+        }
+  
+        // Add "Other" at the end
+        const other = document.createElement("option");
+        other.value = "other";
+        other.textContent = "Other (Type Below)";
+        dropdown.appendChild(other);
+      } catch (err) {
+        console.error("Failed to load test options:", err);
+        dropdown.innerHTML = '<option value="">Failed to load tests</option>';
+      }
+    }
+  
+    // Trigger test loading when page loads
+    window.addEventListener("DOMContentLoaded", loadTests);
+
+    document.getElementById("abnormalForm").onsubmit = async function (e) {
+      e.preventDefault();
+
+      const data = Object.fromEntries(new FormData(e.target));
+      const testName = data.test === "other" && data.otherTest.trim()
+        ? data.otherTest
+        : data.test;
+
+      const body = {
+        age: Number(data.age),
+        gender: data.gender,
+        test: testName,
+        value: Number(data.value)
+      };
+
+      const res = await fetch("http://localhost:8080/abnormal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const resultEl = document.getElementById("result");
+      if (res.ok) {
+        const json = await res.json();
+        resultEl.textContent = `Result: ${json.status.toUpperCase()} (${json.unit})`;
+      } else {
+        const text = await res.text();
+        resultEl.textContent = `Error: ${res.status} – ${text}`;
+      }
+    };
+  </script>
+</body>
+</html>
