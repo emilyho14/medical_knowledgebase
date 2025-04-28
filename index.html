@@ -7,7 +7,7 @@
 <body>
   <h1>HealthAdvisor: An Intelligent Agent for Interpreting Medical Test Results</h1>
 
-  <form id="abnormalForm">
+  <!-- <form id="abnormalForm">
     <label>Age:
       <input type="number" name="age" required>
     </label>
@@ -35,11 +35,58 @@
     </label>
 
     <button type="submit">Check</button>
+  </form> -->
+  <form id="abnormalForm">
+    <fieldset style="border: 2px solid #ccc; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+      <legend><strong>Basic Information</strong></legend>
+  
+      <label>Age:
+        <input type="number" name="age" required>
+      </label>
+  
+      <label>Gender:
+        <select name="gender" required>
+          <option value="female">Female</option>
+          <option value="male">Male</option>
+        </select>
+      </label>
+    </fieldset>
+  
+    <div id="testContainer">
+      <div class="testEntry">
+        <fieldset style="border: 1px dashed #aaa; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+          <legend><strong>Lab Test</strong></legend>
+  
+          <label>Select Test:
+            <select class="testSelect" required>
+              <option value="">--Loading tests--</option>
+              <option value="other">Other (Type Below)</option>
+            </select>
+          </label>
+  
+          <label>If Other, Enter Test Name:
+            <input type="text" class="otherTestInput" placeholder="e.g. ALT">
+          </label>
+  
+          <label>Value:
+            <input type="number" class="valueInput" step="any" required>
+          </label>
+          <button type="button" class="deleteBtn" onclick="deleteTestEntry(this)">🗑 Remove This Test</button>
+        </fieldset>
+      </div>
+    </div>
+  
+    <button type="button" onclick="addTestEntry()">+ Add Another Test</button>
+    <br><br>
+    <button type="submit">Check All</button>
   </form>
+  
+  <pre id="result"></pre>
+  
 
   <pre id="result"></pre>
 
-  <script>
+  <!-- <script>
     async function loadTests() {
       const dropdown = document.getElementById("testDropdown");
   
@@ -101,6 +148,105 @@
         resultEl.textContent = `Error: ${res.status} – ${text}`;
       }
     };
+  </script> -->
+  <script>
+    let testOptions = [];
+  
+    async function loadTests() {
+      const res = await fetch("http://localhost:8080/tests");
+      const data = await res.json();
+      testOptions = data.tests;
+  
+      // Populate initial select
+      populateTestDropdown(document.querySelector(".testSelect"));
+    }
+
+    function deleteTestEntry(button) {
+      const testEntry = button.closest(".testEntry");
+      const container = document.getElementById("testContainer");
+    
+      // Only delete if there’s more than one remaining
+      if (container.querySelectorAll(".testEntry").length > 1) {
+        container.removeChild(testEntry);
+      } else {
+        alert("At least one test entry is required.");
+      }
+    }
+    
+  
+    function populateTestDropdown(selectEl) {
+      selectEl.innerHTML = '<option value="">--Select a test--</option>';
+      for (const label of testOptions) {
+        const value = label.toLowerCase().replace(/ /g, "_"); // backend still expects snake_case value!
+    
+        const titleCaseLabel = label
+          .toLowerCase()
+          .split(" ")
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ");
+    
+        const opt = document.createElement("option");
+        opt.value = value;  // still backend-safe
+        opt.textContent = titleCaseLabel; // nice title-cased text for users
+        selectEl.appendChild(opt);
+      }
+    
+      const other = document.createElement("option");
+      other.value = "other";
+      other.textContent = "Other (Type Below)";
+      selectEl.appendChild(other);
+    }
+      
+    
+    function addTestEntry() {
+      const testContainer = document.getElementById("testContainer");
+      const newEntry = testContainer.firstElementChild.cloneNode(true);
+  
+      newEntry.querySelector(".testSelect").value = "";
+      newEntry.querySelector(".otherTestInput").value = "";
+      newEntry.querySelector(".valueInput").value = "";
+  
+      testContainer.appendChild(newEntry);
+      populateTestDropdown(newEntry.querySelector(".testSelect"));
+    }
+  
+    document.getElementById("abnormalForm").onsubmit = async function (e) {
+      e.preventDefault();
+  
+      const form = e.target;
+      const age = Number(form.age.value);
+      const gender = form.gender.value;
+      const testEntries = form.querySelectorAll(".testEntry");
+  
+      const results = [];
+  
+      for (const entry of testEntries) {
+        const test = entry.querySelector(".testSelect").value;
+        const otherTest = entry.querySelector(".otherTestInput").value.trim();
+        const value = Number(entry.querySelector(".valueInput").value);
+  
+        const finalTest = test === "other" && otherTest ? otherTest : test;
+        if (!finalTest || isNaN(value)) continue;
+  
+        const res = await fetch("http://localhost:8080/abnormal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ age, gender, test: finalTest, value })
+        });
+  
+        if (res.ok) {
+          const json = await res.json();
+          results.push(`${finalTest}: ${json.status.toUpperCase()} (${json.unit})`);
+        } else {
+          results.push(`${finalTest}: Error (${res.status})`);
+        }
+      }
+  
+      document.getElementById("result").textContent = results.join('\n');
+    };
+  
+    window.addEventListener("DOMContentLoaded", loadTests);
   </script>
+  
 </body>
 </html>
