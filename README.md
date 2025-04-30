@@ -39,3 +39,26 @@ HOW TO BUILD THIS CURRENT PROGRAM
 
 TERMINAL COMMANDS:
 - ssh eeho2@timan.cs.illinois.edu
+    - Login as per usual
+- cd ..
+- cd eeho2
+    - Or get to wherever /home/eeho2
+    - ls to make sure index.html is there
+
+ENTER A FILE: 
+- emacs ___<file name>
+
+
+TO SAVE WITH EMACS:
+- Ctrl + x
+- Ctrl + s
+- Ctrl + x
+- Ctrl + c
+
+TO EXIT WITH EMACS:
+- Ctrl + x
+- Ctrl + c
+
+TO SELECT ALL AND DELETE:
+- ctrl + x, then press h
+- 'Delete'
