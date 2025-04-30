@@ -2,20 +2,20 @@
 
 ## How To Run The Program
 
-1. Running the web interface (locally)
+### 1. Running the web interface (locally)
 - In terminal, type 'swipl' and hit enter
 - Run "[medical_kb]." to make sure the code for the knowledge base is updated
 - Run "[lab_server]." to run the code that index.html will use
 - Run "start_server(8080)." to start the server on port 8080. This will allow you to view the web interface locally. Feel free to use a different port number if you prefer that
 
-2. Running the Prolog program (in Terminal)
+### 2. Running the Prolog program (in Terminal)
 - In terminal, type 'swipl' and hit enter
 - Run "[medical_kb]." to make sure the code for the knowledge base is updated
 - NOTE: There are instructions at the bottom of medical_kb.pl if you would like to learn how to run tests locally
 - NOTE: To run the testing file, run "[test_kb]." and then run "run_tests."
 
 
-HOW TO BUILD THIS CURRENT PROGRAM 
+## HOW TO BUILD THIS CURRENT PROGRAM 
 - right now, we manually created some rules
 - keep track of ranges and discuss where the resources the ranges are from
 - now, next step is to see how LLMs can expand the program with more knowledge
@@ -37,7 +37,8 @@ HOW TO BUILD THIS CURRENT PROGRAM
 
 
 
-TERMINAL COMMANDS:
+## TERMINAL COMMANDS:
+### ENTER SERVER:
 - ssh eeho2@timan.cs.illinois.edu
     - Login as per usual
 - cd ..
@@ -45,20 +46,20 @@ TERMINAL COMMANDS:
     - Or get to wherever /home/eeho2
     - ls to make sure index.html is there
 
-ENTER A FILE: 
+### ENTER A FILE: 
 - emacs ___<file name>
 
 
-TO SAVE WITH EMACS:
+### TO SAVE WITH EMACS:
 - Ctrl + x
 - Ctrl + s
 - Ctrl + x
 - Ctrl + c
 
-TO EXIT WITH EMACS:
+### TO EXIT WITH EMACS:
 - Ctrl + x
 - Ctrl + c
 
-TO SELECT ALL AND DELETE:
+### TO SELECT ALL AND DELETE:
 - ctrl + x, then press h
 - 'Delete'
