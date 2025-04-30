@@ -1,6 +1,6 @@
 # HealthAdvisor: An Intelligent Agent for Interpreting Medical Test Results
 
-## How To Run The Program
+## HOW TO RUN THE PROGRAM
 
 ### 1. Running the web interface (locally)
 - In terminal, type 'swipl' and hit enter
