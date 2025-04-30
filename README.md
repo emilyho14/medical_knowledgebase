@@ -38,7 +38,7 @@
 
 
 ## TERMINAL COMMANDS:
-### ENTER SERVER:
+### Enter Server:
 - ssh eeho2@timan.cs.illinois.edu
     - Login as per usual
 - cd ..
@@ -46,20 +46,20 @@
     - Or get to wherever /home/eeho2
     - ls to make sure index.html is there
 
-### ENTER A FILE: 
+### Enter a File: 
 - emacs ___<file name>
 
 
-### TO SAVE WITH EMACS:
+### Save with Emacs:
 - Ctrl + x
 - Ctrl + s
 - Ctrl + x
 - Ctrl + c
 
-### TO EXIT WITH EMACS:
+### Exit with Emacs:
 - Ctrl + x
 - Ctrl + c
 
-### TO SELECT ALL AND DELETE:
+### Select All and Delete:
 - ctrl + x, then press h
 - 'Delete'
