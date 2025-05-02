@@ -42,9 +42,10 @@
 - ssh eeho2@timan.cs.illinois.edu
     - Login as per usual
 - cd ..
-- cd eeho2
-    - Or get to wherever /home/eeho2
+- cd /var/www/html/eeho2
+    - Or get to wherever /var/www/html/eeho2
     - ls to make sure index.html is there
+- pwd to see current directory
 
 ### Enter a File: 
 - emacs ___<file name>
