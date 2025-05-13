@@ -1,5 +1,7 @@
 :- discontiguous patient/3.
 :- discontiguous lab_test/3.
+:- dynamic patient/3.
+:- dynamic lab_test/3.
 
 % -------------------
 % Normal Laboratory Test Ranges
@@ -68,6 +70,12 @@ normal_range(creatinine, 0, 0.6, infant, both, 'mg/dL').
 normal_range(creatinine, 0.5, 1.5, adult, both, 'mg/dL').
 
 normal_range(egfr, 60, 120, adult, both, 'mL/min/1.73m²').
+
+normal_range(fasting_glucose, 30, 90, infant, both, 'mg/dL').
+normal_range(fasting_glucose, 60, 105, toddler, both, 'mg/dL').
+normal_range(fasting_glucose, 60, 105, child, both, 'mg/dL').
+normal_range(fasting_glucose, 60, 105, teen, both, 'mg/dL').
+normal_range(fasting_glucose, 70, 110, adult, both, 'mg/dL').
 
 normal_range(ferritin, 27, 307, adult, female, 'ng/mL').
 normal_range(ferritin, 24, 336, adult, male, 'ng/mL').
@@ -173,25 +181,19 @@ age_group(Age, teen) :- Age >= 13, Age < 18.
 age_group(Age, adult) :- Age >= 18.
 
 % -------------------
-% Abnormal Value Detection
+% Range Lookup and Evaluation
 % -------------------
-
-abnormal(Person, TestRaw, Value, Status, Unit) :-
+get_range_status(TestRaw, Person, Value, Status) :-
     normalize_test_name(TestRaw, Test),
     patient(Person, Age, Gender),
     age_group(Age, AgeGroup),
-    (   find_normal_range_with_fallback(Test, AgeGroup, Gender, Min, Max, Unit)
-    ->  (Value < Min -> Status = low ;
-         Value > Max -> Status = high ;
-         Status = normal)
-    ;   Status = unknown,
-        Unit = '?'
+    (   find_normal_range_with_fallback(Test, AgeGroup, Gender, Min, Max, _Unit)
+    ->  (Value < Min -> Status = toolow
+        ; Value > Max -> Status = toohigh
+        ; Status = normal)
+    ;   Status = unknown
     ).
 
-
-% -------------------
-% Range Fallbacks
-% -------------------
 find_normal_range_with_fallback(Test, AgeGroup, Gender, Min, Max, Unit) :-
     (   normal_range(Test, Min, Max, AgeGroup, Gender, Unit)
     ;   normal_range(Test, Min, Max, AgeGroup, both, Unit)
@@ -200,9 +202,6 @@ find_normal_range_with_fallback(Test, AgeGroup, Gender, Min, Max, Unit) :-
     ),
     !.
 
-% -------------------
-% Normalizing Test Names
-% -------------------
 normalize_test_name(Raw, Cleaned) :-
     (   atom(Raw) -> AtomRaw = Raw ; atom_string(Raw, AtomRaw)
     ),
@@ -215,96 +214,80 @@ replace_non_alnum(Char, '_') :- \+ char_type(Char, alnum), !.
 replace_non_alnum(Char, Char).
 
 % -------------------
-% Diagnoses
+% Diagnoses using get_range_status/4
 % -------------------
-% Acute liver failure: high ALT, high AST, high bilirubin
 diagnosis(Person, acute_liver_failure) :-
-    lab_test(Person, alt, ALT), ALT > 100,
-    lab_test(Person, ast, AST), AST > 100,
-    lab_test(Person, bilirubin_total, Bili), Bili > 3.0.
+    lab_test(Person, alt, ALT), get_range_status(alt, Person, ALT, toohigh),
+    lab_test(Person, ast, AST), get_range_status(ast, Person, AST, toohigh),
+    lab_test(Person, bilirubin_total, Bili), get_range_status(bilirubin_total, Person, Bili, toohigh).
 
 diagnosis(Person, anemia) :-
-    patient(Person, _, male),
-    lab_test(Person, hemoglobin, Hgb),
-    Hgb < 14.
-
-diagnosis(Person, anemia) :-
-    patient(Person, _, female),
-    lab_test(Person, hemoglobin, Hgb),
-    Hgb < 12.
+    lab_test(Person, hemoglobin, Hgb), get_range_status(hemoglobin, Person, Hgb, toolow).
 
 diagnosis(Person, chronic_kidney_disease) :-
-    lab_test(Person, creatinine, Creat), Creat > 1.2,
-    lab_test(Person, gfr, GFR), GFR < 60.
+    lab_test(Person, creatinine, Creat), get_range_status(creatinine, Person, Creat, toohigh),
+    lab_test(Person, gfr, GFR), get_range_status(gfr, Person, GFR, toolow).
 
 diagnosis(Person, dehydration) :-
-    lab_test(Person, urine_specific_gravity, SG),
-    SG > 1.030,
-    lab_test(Person, sodium, Na),
-    Na > 145.
+    lab_test(Person, urine_specific_gravity, SG), get_range_status(urine_specific_gravity, Person, SG, toohigh),
+    lab_test(Person, sodium, Na), get_range_status(sodium, Person, Na, toohigh).
 
 diagnosis(Person, diabetes) :-
     lab_test(Person, fasting_glucose, Glucose),
-    Glucose >= 126.
+    get_range_status(fasting_glucose, Person, Glucose, toohigh).
 
 diagnosis(Person, hyperkalemia) :-
-    lab_test(Person, potassium, K),
-    K > 5.5.
+    lab_test(Person, potassium, K), get_range_status(potassium, Person, K, toohigh).
 
 diagnosis(Person, hyperlipidemia) :-
-    lab_test(Person, ldl_cholesterol, LDL),
-    LDL > 100.
+    lab_test(Person, ldl_cholesterol, LDL), get_range_status(ldl_cholesterol, Person, LDL, toohigh).
 
 diagnosis(Person, hypernatremia) :-
-    lab_test(Person, sodium, Na),
-    Na > 145.
+    lab_test(Person, sodium, Na), get_range_status(sodium, Person, Na, toohigh).
 
 diagnosis(Person, hypocalcemia) :-
-    lab_test(Person, total_calcium, Ca),
-    Ca < 2.1.
+    lab_test(Person, total_calcium, Ca), get_range_status(total_calcium, Person, Ca, toolow).
 
 diagnosis(Person, hyponatremia) :-
-    lab_test(Person, sodium, Na),
-    Na < 135.
+    lab_test(Person, sodium, Na), get_range_status(sodium, Person, Na, toolow).
 
 diagnosis(Person, iron_deficiency) :-
-    lab_test(Person, ferritin, Ferritin),
-    Ferritin < 30.
+    lab_test(Person, ferritin, Ferritin), get_range_status(ferritin, Person, Ferritin, toolow).
 
 diagnosis(Person, kidney_disease) :-
-    lab_test(Person, creatinine, Creat),
-    Creat > 1.3.
+    lab_test(Person, creatinine, Creat), get_range_status(creatinine, Person, Creat, toohigh).
 
 diagnosis(Person, liver_disease) :-
-    lab_test(Person, alt, ALT),
-    lab_test(Person, ast, AST),
-    ALT > 40, AST > 35.
+    lab_test(Person, alt, ALT), get_range_status(alt, Person, ALT, toohigh),
+    lab_test(Person, ast, AST), get_range_status(ast, Person, AST, toohigh).
 
 diagnosis(Person, liver_dysfunction) :-
-    lab_test(Person, albumin, Alb),
-    Alb < 3.5,
-    lab_test(Person, alanine_aminotransferase, ALT),
-    ALT > 40.
+    lab_test(Person, albumin, Alb), get_range_status(albumin, Person, Alb, toolow),
+    lab_test(Person, alanine_aminotransferase, ALT), get_range_status(alanine_aminotransferase, Person, ALT, toohigh).
 
 diagnosis(Person, metabolic_acidosis) :-
-    lab_test(Person, bicarbonate, Bicarb),
-    Bicarb < 22.
+    lab_test(Person, bicarbonate, Bicarb), get_range_status(bicarbonate, Person, Bicarb, toolow).
 
 diagnosis(Person, metabolic_syndrome) :-
-    lab_test(Person, glucose, Glu), Glu >= 100,
-    lab_test(Person, triglycerides, TG), TG >= 150,
-    lab_test(Person, hdl_cholesterol, HDL), HDL < 40.
+    lab_test(Person, glucose, Glu), get_range_status(glucose, Person, Glu, toohigh),
+    lab_test(Person, triglycerides, TG), get_range_status(triglycerides, Person, TG, toohigh),
+    lab_test(Person, hdl_cholesterol, HDL), get_range_status(hdl_cholesterol, Person, HDL, toolow).
 
 diagnosis(Person, prediabetes) :-
     lab_test(Person, fasting_glucose, Glucose),
-    Glucose >= 100, Glucose =< 125.
-
-
+    get_range_status(fasting_glucose, Person, Glucose, normal),
+    patient(Person, Age, Gender),
+    age_group(Age, AgeGroup),
+    find_normal_range_with_fallback(fasting_glucose, AgeGroup, Gender, _, Max, _),
+    Threshold is Max - 5,
+    Glucose >= Threshold.
+    
 % -------------------
 % Find All Diagnoses
 % -------------------
 all_diagnoses(Person, Diagnoses) :-
-    findall(D, diagnosis(Person, D), Diagnoses).
+    setof(D, diagnosis(Person, D), Diagnoses), !.
+all_diagnoses(_, []).
 
 % -------------------
 % Explanation Generator

@@ -1,20 +1,22 @@
-# Use an official Python runtime as a parent image
-FROM python:3.9-slim
+# Use a base image with a package manager
+FROM ubuntu:22.04
 
-# Set the working directory in the container
-WORKDIR /app
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Copy the current directory contents into the container at /app
-COPY . /app
+# Install SWI-Prolog and curl (optional)
+RUN apt-get update && \
+    apt-get install -y swi-prolog curl && \
+    apt-get clean
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Set working directory
+WORKDIR /var/www/html/eeho2
 
-# Make port 5000 available to the world outside the container (optional)
+# Copy project files into the container
+COPY . .
+
+# Expose port your Prolog server listens on (adjust if needed)
 EXPOSE 5000
 
-# Define environment variables (optional)
-ENV PYTHONUNBUFFERED 1
-
-# Run the application (replace with your start command)
-CMD ["python", "app.py"]
+# Start the Prolog server
+CMD ["swipl", "-q", "-g", "lab_server:start_server(5000)"]
