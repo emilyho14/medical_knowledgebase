@@ -19,4 +19,4 @@ COPY . .
 EXPOSE 5000
 
 # Start the Prolog server
-CMD ["swipl", "-q", "-g", "lab_server:start_server(5000)"]
+CMD ["swipl", "-q", "-s", "lab_server.pl", "-g", "lab_server:start_server(5000)"]

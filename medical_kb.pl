@@ -69,7 +69,7 @@ normal_range(copper, 100, 200, adult, both, 'ug/dL').
 normal_range(creatinine, 0, 0.6, infant, both, 'mg/dL').
 normal_range(creatinine, 0.5, 1.5, adult, both, 'mg/dL').
 
-normal_range(egfr, 60, 120, adult, both, 'mL/min/1.73m²').
+normal_range(egfr, 60, 120, adult, both, 'mL/min/1.73m2').
 
 normal_range(fasting_glucose, 30, 90, infant, both, 'mg/dL').
 normal_range(fasting_glucose, 60, 105, toddler, both, 'mg/dL').
@@ -194,11 +194,28 @@ get_range_status(TestRaw, Person, Value, Status) :-
     ;   Status = unknown
     ).
 
+abnormal(Person, TestRaw, Value, Status, Unit) :-
+    normalize_test_name(TestRaw, Test),
+    patient(Person, Age, Gender),
+    age_group(Age, AgeGroup),
+    find_normal_range_with_fallback(Test, AgeGroup, Gender, Min, Max, Unit),
+    (   Value < Min -> Status = low
+    ;   Value > Max -> Status = high
+    ;   Status = normal
+    ).
+
+with_patient_and_tests(Patient, Age, Gender, Tests, Goal) :-
+    setup_call_cleanup(
+        (asserta(patient(Patient, Age, Gender)), maplist(asserta, Tests)),
+        call(Goal),
+        (retractall(patient(Patient, _, _)), maplist(retract, Tests))
+    ).
+
 find_normal_range_with_fallback(Test, AgeGroup, Gender, Min, Max, Unit) :-
     (   normal_range(Test, Min, Max, AgeGroup, Gender, Unit)
     ;   normal_range(Test, Min, Max, AgeGroup, both, Unit)
-    ;   normal_range(Test, Min, Max, _, Gender, Unit)
-    ;   normal_range(Test, Min, Max, _, both, Unit)
+    ;   normal_range(Test, Min, Max, both, Gender, Unit)
+    ;   normal_range(Test, Min, Max, both, both, Unit)
     ),
     !.
 
@@ -208,7 +225,17 @@ normalize_test_name(Raw, Cleaned) :-
     downcase_atom(AtomRaw, Lower),
     atom_chars(Lower, Chars),
     maplist(replace_non_alnum, Chars, NormalizedChars),
-    atom_chars(Cleaned, NormalizedChars).
+    atom_chars(Normalized, NormalizedChars),
+    canonical_test_name(Normalized, Cleaned).
+
+canonical_test_name(alt, alanine_aminotransferase) :- !.
+canonical_test_name(ast, aspartate_aminotransferase) :- !.
+canonical_test_name(gfr, egfr) :- !.
+canonical_test_name(Test, Test).
+
+normalize_gender(Raw, Gender) :-
+    (atom(Raw) -> AtomRaw = Raw ; atom_string(Raw, AtomRaw)),
+    downcase_atom(AtomRaw, Gender).
 
 replace_non_alnum(Char, '_') :- \+ char_type(Char, alnum), !.
 replace_non_alnum(Char, Char).

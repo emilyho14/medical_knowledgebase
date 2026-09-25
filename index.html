@@ -153,7 +153,7 @@
     let testOptions = [];
   
     async function loadTests() {
-      const res = await fetch("http://localhost:8080/tests");
+      const res = await fetch("/tests");
       const data = await res.json();
       testOptions = data.tests;
   
@@ -228,7 +228,7 @@
         const finalTest = test === "other" && otherTest ? otherTest : test;
         if (!finalTest || isNaN(value)) continue;
   
-        const res = await fetch("http://localhost:8080/abnormal", {
+        const res = await fetch("/abnormal", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ age, gender, test: finalTest, value })

@@ -1,64 +1,4 @@
-% Load the medical knowledge base
 :- consult('medical_kb.pl').
-
-% Start the server
-start_server(Port) :-
-    http_server(http_dispatch, [port(Port)]).
-
-% Abnormal test logic
-handle_abnormal(Request) :-
-    http_read_json_dict(Request, Dict),
-    normalize_test_name(Dict.test, Test),
-    Age = Dict.age,
-    Gender = Dict.gender,
-    age_group(Age, AgeGroup),
-    (   find_normal_range_with_fallback(Test, AgeGroup, Gender, Min, Max, Unit)
-    ->  (Dict.value < Min -> Status = low
-        ; Dict.value > Max -> Status = high
-        ; Status = normal),
-        reply_json_dict(_{status: Status, unit: Unit})
-    ;   reply_json_dict(_{error: "Test not found"}, [status(404)])
-    ).
-
-% Get all unique tests from normal_range facts
-handle_get_tests(_Request) :-
-    setof(Test, Min^Max^Age^Gender^Unit^normal_range(Test, Min, Max, Age, Gender, Unit), RawTests),
-    maplist(capitalize_atom_words, RawTests, CapitalizedTests),
-    reply_json_dict(_{tests: CapitalizedTests}).
-
-% Capitalize each word separated by underscores
-capitalize_atom_words(Atom, Capitalized) :-
-    atomic_list_concat(Parts, '_', Atom),
-    maplist(cap_word, Parts, CapitalizedParts),
-    atomic_list_concat(CapitalizedParts, ' ', Capitalized).
-
-cap_word(Part, Capitalized) :-
-    atom_chars(Part, [H|T]),
-    upcase_atom(H, UH),
-    atom_chars(Capitalized, [UH|T]).
-
-% Abnormal predicate for CLI use
-abnormal(_, TestRaw, Value, Status, Unit) :-
-    normalize_test_name(TestRaw, Test),
-    patient(_, Age, Gender),
-    age_group(Age, AgeGroup),
-    find_normal_range_with_fallback(Test, AgeGroup, Gender, Min, Max, Unit),
-    (Value < Min -> Status = low ;
-     Value > Max -> Status = high ;
-     Status = normal).
-
-with_patient_and_tests(Patient, Age, Gender, Tests, Goal) :-
-    % Setup
-    asserta(patient(Patient, Age, Gender)),
-    maplist(asserta, Tests),
-    % Run your goal
-    (   call(Goal)
-    ->  Result = true
-    ;   Result = fail),
-    % Cleanup
-    retractall(patient(Patient, _, _)),
-    maplist(retract, Tests),
-    Result == true.
 
 
 % -------------------
@@ -82,12 +22,25 @@ test(age_group_when_age_is_30_is_adult) :- age_group(30, adult).
 % Abnormality logic tests
 test(abnormal_when_potassium_high_in_adult) :- abnormal(dummy, 'Potassium', 6.0, high, 'mEq/L').
 
+test(abnormal_accepts_alt_alias) :-
+    with_patient_and_tests(dummy, 35, male,
+        [ lab_test(dummy, alt, 40) ],
+        abnormal(dummy, alt, 40, high, 'U/L')).
+
+test(abnormal_does_not_use_another_age_group_range, [fail]) :-
+    with_patient_and_tests(dummy, 10, female,
+        [ lab_test(dummy, ferritin, 10) ],
+        abnormal(dummy, ferritin, 10, low, 'ng/mL')).
+
 test(abnormal_when_hemoglobin_normal_for_child) :-
     with_patient_and_tests(dummy, 10, male,
         [ lab_test(dummy, hemoglobin, 11) ],
         abnormal(dummy, hemoglobin, 11, normal, 'g/dL')).
 
-test(abnormal_when_sodium_low_for_child) :- abnormal(dummy, sodium, 130, low, 'mEq/L').
+test(abnormal_when_sodium_low_for_child) :-
+    with_patient_and_tests(dummy, 10, male,
+        [ lab_test(dummy, sodium, 130) ],
+        abnormal(dummy, sodium, 130, low, 'mEq/L')).
 
 test(abnormal_when_bilirubin_normal_for_infant) :-
     with_patient_and_tests(dummy, 0.5, female,
@@ -95,7 +48,10 @@ test(abnormal_when_bilirubin_normal_for_infant) :-
         abnormal(dummy, bilirubin_total, 8.0, normal, 'mg/dL')).
 
 
-test(abnormal_when_calcium_low_for_adult) :- abnormal(dummy, calcium, 8.0, low, 'mg/dL').
+test(abnormal_when_calcium_low_for_adult) :-
+    with_patient_and_tests(dummy, 35, male,
+        [ lab_test(dummy, calcium, 8.0) ],
+        abnormal(dummy, calcium, 8.0, low, 'mg/dL')).
 
 test(abnormal_when_albumin_high_for_infant) :-
     with_patient_and_tests(dummy, 0.4, female,
@@ -103,7 +59,10 @@ test(abnormal_when_albumin_high_for_infant) :-
         abnormal(dummy, albumin, 5.0, high, 'g/dL')).
 
 
-test(abnormal_when_iron_normal_for_child) :- abnormal(dummy, iron, 100, normal, 'mcg/dL').
+test(abnormal_when_iron_normal_for_child) :-
+    with_patient_and_tests(dummy, 10, male,
+        [ lab_test(dummy, iron, 100) ],
+        abnormal(dummy, iron, 100, normal, 'mcg/dL')).
 
 test(abnormal_when_hemoglobin_low_for_female) :-
     with_patient_and_tests(dummy, 40, female,
@@ -124,7 +83,6 @@ test(diagnoses_include_diabetes_anemia_hyperkalemia_for_adult_male) :-
           lab_test(dummy, potassium, 6.0)
         ],
         ( all_diagnoses(dummy, D),
-          writeln(D),  % DEBUG LINE
           subset([diabetes, anemia, hyperkalemia], D)
         )).
 
